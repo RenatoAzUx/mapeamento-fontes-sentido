@@ -28,10 +28,14 @@ export const LoadingAnalysis: React.FC = () => {
         </div>
       </div>
       
-      <h3 className="text-2xl font-bold text-gray-800 mb-4 serif">Processando seu Mapa de Sentido</h3>
-      <p className="text-amber-800/60 font-medium h-6 transition-all duration-500 italic">
-        {messages[step]}
+      <h3 className="text-xl font-black text-amber-900 mb-2 uppercase tracking-[0.2em]">Gerando Devolutiva...</h3>
+      <p className="text-amber-800/40 font-black text-[10px] uppercase tracking-widest mb-8">
+        Gerando insights para seu mapa existencial com terapeuta de IA treinado
       </p>
+
+      <div className="h-6 transition-all duration-500 italic text-amber-900/60 font-medium text-sm">
+        {messages[step]}
+      </div>
       
       <div className="mt-12 w-64 bg-amber-50 h-1.5 rounded-full overflow-hidden">
         <div 
