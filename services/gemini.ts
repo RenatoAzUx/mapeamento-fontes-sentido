@@ -4,14 +4,15 @@ import { AssessmentResult } from "../types";
 import { DIMENSIONS_MAP } from "../constants";
 
 export const generateFeedback = async (result: AssessmentResult): Promise<string> => {
-  // O Vite substituirá 'process.env.API_KEY' pelo valor configurado no vite.config.ts
-  if (!process.env.API_KEY || process.env.API_KEY === "" || process.env.API_KEY === "undefined") {
-    return "ERRO_API: Chave de acesso não detectada. Verifique se 'VITE_API_KEY' está configurada no painel da Vercel e realize um novo deploy.";
+  // O Vite substituirá 'process.env.API_KEY' pelo valor real durante o build na Vercel.
+  const apiKey = process.env.API_KEY;
+
+  if (!apiKey || apiKey === "" || apiKey === "undefined") {
+    return "ERRO_API: Chave de acesso não detectada. Certifique-se de que a variável 'API_KEY' ou 'VITE_API_KEY' foi adicionada nas configurações da Vercel e que o deploy foi concluído.";
   }
 
   try {
-    // Fix: Always use process.env.API_KEY directly when initializing the GoogleGenAI instance.
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey });
     const { userInfo, scores } = result;
 
     const sourceNameMap = DIMENSIONS_MAP.reduce((acc, dim) => {
@@ -43,9 +44,9 @@ Finalize com:
 🧠 Consultoria: https://wa.me/5511998920790?text=Fiz%20meu%20mapeamento.%20Quero%20aplicar.
 🔎 Instagram: https://instagram.com/renatoli.on`;
 
-    // Fix: Use ai.models.generateContent directly to query GenAI with model and prompt.
+    // Alterado para 'gemini-flash-latest' para garantir compatibilidade total e evitar erro 400.
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-flash-latest',
       contents: userPrompt,
       config: {
         systemInstruction: systemInstruction,
@@ -53,16 +54,15 @@ Finalize com:
       }
     });
 
-    // Fix: Use the .text property to access generated content (not a method).
     return response.text || "Erro: Conteúdo não gerado.";
 
   } catch (error: any) {
     console.error("DEBUG GEMINI ERROR:", error);
     
     if (error.message?.includes("API Key") || error.message?.includes("key")) {
-      return "ERRO_API: Chave inválida ou erro de cota. Verifique as configurações no Google AI Studio.";
+      return "ERRO_API: Chave inválida ou erro de autenticação. Verifique suas credenciais no Google AI Studio.";
     }
 
-    return `ERRO_API: ${error.message || "Falha na conexão com a inteligência artificial."}`;
+    return `ERRO_API: ${error.message || "Falha na conexão com o motor existencial."}`;
   }
 };

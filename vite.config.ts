@@ -3,15 +3,13 @@ import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
-  // Carrega variáveis de ambiente do diretório raiz
-  // Fix: Cast process to any to access cwd() which is available in Node.js during config execution
+  // Carrega as variáveis de ambiente do processo de build
   const env = loadEnv(mode, (process as any).cwd(), '');
   
   return {
     plugins: [react()],
     define: {
-      // Mapeia a chave de ambiente para o código do cliente
-      // Prioriza VITE_API_KEY conforme padrão Vite, mas aceita API_KEY para compatibilidade Vercel
+      // Garante que o SDK encontre a chave em process.env.API_KEY, independentemente do prefixo usado na Vercel.
       'process.env.API_KEY': JSON.stringify(env.VITE_API_KEY || env.API_KEY || "")
     },
     build: {
