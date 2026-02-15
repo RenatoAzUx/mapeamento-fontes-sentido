@@ -1,10 +1,11 @@
 
+// Fix: Corrected property access from scores.scores to scores.sources to match the Scores type.
 import { GoogleGenAI } from "@google/genai";
 import { AssessmentResult } from "../types";
 import { DIMENSIONS_MAP } from "../constants";
 
 export const generateFeedback = async (result: AssessmentResult): Promise<string> => {
-  // Use process.env.API_KEY directly as required by the Google GenAI SDK guidelines.
+  // Inicialização usando process.env.API_KEY conforme diretrizes
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const { userInfo, scores } = result;
 
@@ -13,6 +14,7 @@ export const generateFeedback = async (result: AssessmentResult): Promise<string
     return acc;
   }, {} as Record<string, string>);
 
+  // FIX: scores.scores does not exist on type Scores, should be scores.sources
   const sortedSources = Object.entries(scores.sources)
     .sort((a, b) => (b[1] as number) - (a[1] as number));
 
@@ -22,8 +24,8 @@ export const generateFeedback = async (result: AssessmentResult): Promise<string
   const systemInstruction = `Você é um assistente especializado em análise psicológica existencial. Sua função é gerar uma devolutiva profunda, focada em impacto e transformação.
 
 Regras obrigatórias:
-- Modelo: Foco total em impacto existencial, sem rodeios ou introduções genéricas.
-- Extensão: Entre 500 e 700 palavras.
+- Modelo: Foco total em impacto existencial, denso e sem rodeios.
+- Extensão: Entre 600 e 800 palavras.
 - Tom: Profundo, elegante, provocativo e direto ao ponto.
 - Estrutura: 5 a 7 parágrafos em prosa fluida (sem listas).
 - Conteúdo: Inicie pelo score, classifique a faixa, analise as dimensões e âncoras dominantes.
@@ -52,7 +54,7 @@ DADOS DO USUÁRIO:
 
   const userPrompt = `${inputData}
 
-Gere a análise existencial focada em impacto agora.
+Gere a análise existencial focada em impacto agora (600-800 palavras).
 
 Finalize com:
 📩 Quer continuar aprofundando seu autoconhecimento?
@@ -64,13 +66,12 @@ Finalize com:
 🔎 Conteúdos diários:
 👉 https://instagram.com/renatoli.on`;
 
-  // Implementação de Timeout de 60 segundos
+  // Timeout de 40 segundos para maior resiliência conforme solicitado
   const fetchWithTimeout = async () => {
     const timeoutPromise = new Promise<any>((_, reject) => {
-      setTimeout(() => reject(new Error("TIMEOUT_ERROR")), 60000);
+      setTimeout(() => reject(new Error("TIMEOUT_ERROR")), 40000);
     });
 
-    // Use ai.models.generateContent to query GenAI with model name and prompt directly.
     const apiCall = ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: userPrompt,
@@ -85,13 +86,15 @@ Finalize com:
 
   try {
     const response = await fetchWithTimeout();
-    // Access the .text property directly (not as a function).
     return response.text || "Não foi possível gerar a análise no momento.";
   } catch (error: any) {
+    // Log detalhado do erro para depuração no navegador
+    console.log("DETALHES DO ERRO API GEMINI:", error);
+    
     if (error.message === "TIMEOUT_ERROR") {
-      return "OCORREU UM TEMPO LIMITE: A análise profunda está levando mais tempo do que o esperado devido à alta demanda. Por favor, clique no botão 'Reiniciar' ou tente novamente em alguns instantes para processar seus dados.";
+      return "TIMEOUT: A análise está demorando mais do que o esperado.";
     }
-    console.error("Erro na geração de devolutiva:", error);
-    return "ERRO DE CONEXÃO: Não conseguimos conectar com o motor de análise existencial. Por favor, verifique sua conexão e tente novamente.";
+    
+    return `ERRO_API: ${error.message || "Erro desconhecido na conexão com a IA."}`;
   }
 };

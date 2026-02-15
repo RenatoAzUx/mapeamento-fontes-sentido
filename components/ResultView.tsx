@@ -1,9 +1,10 @@
 
-import React, { useEffect, useState } from 'react';
+// Fix: Added React import to resolve the 'Cannot find namespace React' error for React.FC.
+import React, { useEffect, useState, useCallback } from 'react';
 import { AssessmentResult } from '../types';
 import { generateFeedback } from '../services/gemini';
 import { sendResultToAdmin } from '../services/notifications';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { DIMENSIONS_MAP } from '../constants';
 
 interface Props {
@@ -16,14 +17,15 @@ export const ResultView: React.FC<Props> = ({ result, onReset }) => {
   const [loading, setLoading] = useState(true);
   const [synced, setSynced] = useState(false);
   const [error, setError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
-  useEffect(() => {
-    const processResults = async () => {
-      setLoading(true);
-      setError(false);
+  const processResults = useCallback(async () => {
+    setLoading(true);
+    setError(false);
+    try {
       const text = await generateFeedback(result);
       
-      if (text.includes("OCORREU UM TEMPO LIMITE") || text.includes("ERRO DE CONEXÃO")) {
+      if (text.startsWith("TIMEOUT") || text.startsWith("ERRO_API")) {
         setError(true);
       }
       
@@ -31,10 +33,19 @@ export const ResultView: React.FC<Props> = ({ result, onReset }) => {
       setLoading(false);
       
       // Envio para o admin em segundo plano
-      sendResultToAdmin({ ...result, aiFeedback: text }).then(success => setSynced(success));
-    };
+      if (!synced) {
+        sendResultToAdmin({ ...result, aiFeedback: text }).then(success => setSynced(success));
+      }
+    } catch (err) {
+      console.error("Erro fatal ao processar resultados:", err);
+      setError(true);
+      setLoading(false);
+    }
+  }, [result, synced]);
+
+  useEffect(() => {
     processResults();
-  }, [result]);
+  }, [processResults, retryCount]);
 
   const dimensionData = DIMENSIONS_MAP.map(dim => ({
     name: dim.name,
@@ -66,6 +77,20 @@ export const ResultView: React.FC<Props> = ({ result, onReset }) => {
   };
 
   const formatFeedback = (text: string) => {
+    if (error) {
+      return (
+        <div className="text-center py-8">
+          <p className="text-rose-900 font-bold mb-4">{text}</p>
+          <button 
+            onClick={() => setRetryCount(prev => prev + 1)}
+            className="px-8 py-3 bg-rose-600 text-white rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-rose-700 transition shadow-lg"
+          >
+            Tentar Gerar Novamente
+          </button>
+        </div>
+      );
+    }
+
     return text.split('\n').filter(p => p.trim() !== '').map((paragraph, i) => {
       const parts = paragraph.split(/(\*\*.*?\*\*)/g);
       const content = parts.map((part, j) => {
@@ -90,7 +115,7 @@ export const ResultView: React.FC<Props> = ({ result, onReset }) => {
            ) : (
              <>
                <div className="w-2 h-2 bg-amber-300 rounded-full animate-pulse"></div>
-               <span className="text-[10px] font-black text-amber-900/60 uppercase tracking-widest">Enviando dados...</span>
+               <span className="text-[10px] font-black text-amber-900/60 uppercase tracking-widest">Sincronizando...</span>
              </>
            )}
         </div>
@@ -133,7 +158,7 @@ export const ResultView: React.FC<Props> = ({ result, onReset }) => {
 
       <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className="bg-amber-50/20 p-8 rounded-[2.5rem] border border-amber-100 print:border-none print:bg-transparent">
-          <h3 className="text-lg font-black text-amber-900 mb-6 uppercase tracking-widest text-center">Configuração de Dimensões</h3>
+          <h3 className="text-lg font-black text-amber-900 mb-6 uppercase tracking-widest text-center">Dimensões</h3>
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={dimensionData} layout="vertical" margin={{ left: -10, right: 30 }}>
@@ -150,7 +175,7 @@ export const ResultView: React.FC<Props> = ({ result, onReset }) => {
         </div>
 
         <div className="bg-amber-50/20 p-8 rounded-[2.5rem] border border-amber-100 print:border-none print:bg-transparent">
-          <h3 className="text-lg font-black text-amber-900 mb-6 uppercase tracking-widest text-center">Âncoras Dominantes</h3>
+          <h3 className="text-lg font-black text-amber-900 mb-6 uppercase tracking-widest text-center">Âncoras Principais</h3>
           <ul className="space-y-4">
             {topSources.map((s) => (
               <li key={s.name} className="flex justify-between items-center bg-white p-4 rounded-2xl border border-amber-50 shadow-sm print:shadow-none">
@@ -176,7 +201,7 @@ export const ResultView: React.FC<Props> = ({ result, onReset }) => {
                 <i className={`fas ${error ? 'fa-triangle-exclamation' : 'fa-feather-pointed'} text-xl`}></i>
               </div>
               <h3 className={`text-3xl font-black m-0 serif ${error ? 'text-rose-950' : 'text-amber-950'}`}>
-                {error ? 'Nota sobre a Análise' : 'Análise Existencial Narrativa'}
+                {error ? 'Falha na Geração' : 'Análise Existencial Narrativa'}
               </h3>
             </div>
             {!error && !loading && (
@@ -193,21 +218,13 @@ export const ResultView: React.FC<Props> = ({ result, onReset }) => {
             <div className="flex flex-col items-center py-20">
               <div className="animate-spin rounded-full h-14 w-14 border-4 border-amber-600 border-t-transparent mb-6"></div>
               <p className="text-amber-800 font-bold uppercase tracking-widest text-sm text-center">
-                Gerando Devolutiva Personalizada...<br/>
-                <span className="text-[10px] opacity-60 italic">Otimizando para velocidade e impacto.</span>
+                Processando Devolutiva...<br/>
+                <span className="text-[10px] opacity-60 italic">Analisando impacto e densidade existencial.</span>
               </p>
             </div>
           ) : (
             <div className={`leading-[1.8] font-medium text-lg relative serif px-4 sm:px-8 print:px-0 print:text-base ${error ? 'text-rose-900' : 'text-amber-950/90'}`}>
               {formatFeedback(feedback)}
-              {error && (
-                <button 
-                  onClick={() => window.location.reload()}
-                  className="mt-8 px-8 py-3 bg-rose-600 text-white rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-rose-700 transition"
-                >
-                  Tentar Novamente
-                </button>
-              )}
             </div>
           )}
         </div>
@@ -219,12 +236,12 @@ export const ResultView: React.FC<Props> = ({ result, onReset }) => {
             <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-amber-800 rounded-full opacity-20 blur-3xl"></div>
             <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
               <div className="w-20 h-20 bg-amber-800 rounded-full flex items-center justify-center flex-shrink-0 text-3xl">
-                <i className="fas fa-arrows-rotate animate-spin-slow"></i>
+                <i className="fas fa-arrows-rotate animate-spin-slow text-amber-400"></i>
               </div>
               <div>
                 <h3 className="text-2xl font-bold mb-3 serif">Ciclo de Evolução Existencial</h3>
                 <p className="text-amber-100/80 leading-relaxed mb-4">
-                  O sentido da vida não é um destino, mas um processo vivo. Para transformar esta análise em mudança concreta, 
+                  O sentido da vida é um processo vivo. Para transformar esta análise em mudança concreta, 
                   recomendamos <strong>refazer este mapeamento a cada 30 ou 90 dias</strong>.
                 </p>
               </div>
