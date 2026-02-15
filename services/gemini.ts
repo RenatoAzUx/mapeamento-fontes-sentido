@@ -4,9 +4,8 @@ import { AssessmentResult } from "../types";
 import { DIMENSIONS_MAP } from "../constants";
 
 export const generateFeedback = async (result: AssessmentResult): Promise<string> => {
-  // Always use process.env.API_KEY directly for initialization as per @google/genai guidelines.
+  // Use process.env.API_KEY directly as required by the Google GenAI SDK guidelines.
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  
   const { userInfo, scores } = result;
 
   const sourceNameMap = DIMENSIONS_MAP.reduce((acc, dim) => {
@@ -20,22 +19,17 @@ export const generateFeedback = async (result: AssessmentResult): Promise<string
   const top3 = sortedSources.slice(0, 3).map(([code, score]) => `${sourceNameMap[code]} (${score} pts)`);
   const bottom3 = sortedSources.slice(-3).map(([code, score]) => `${sourceNameMap[code]} (${score} pts)`);
 
-  const systemInstruction = `Você é um assistente especializado em análise psicológica existencial e interpretação de sentido de vida. Sua função é gerar uma devolutiva profunda, reflexiva e estruturada para um teste autoral de 135 perguntas baseado em 27 fontes de sentido organizadas em 4 dimensões.
+  const systemInstruction = `Você é um assistente especializado em análise psicológica existencial. Sua função é gerar uma devolutiva profunda, focada em impacto e transformação.
 
 Regras obrigatórias:
-- Nunca utilizar códigos técnicos como D1, D2, S01 etc.
-- Utilizar exclusivamente os nomes completos das dimensões: Auto-Transcendência, Autoatualização, Ordem, Bem-Estar e Prazer.
-- Sempre iniciar a devolutiva pelo score total.
-- Classificar o resultado dentro das 5 faixas definidas.
-- Não realizar diagnóstico clínico.
-- Não usar linguagem alarmista.
-- Linguagem profunda, clara, elegante, provocativa e esperançosa.
-- Produzir entre 600 e 800 palavras.
-- Estruturar em 7 a 10 parágrafos organizados em formato narrativo fluido.
-- Não utilizar listas com marcadores; escrever em prosa contínua.
-- Recomende explicitamente que o usuário refaça este mapeamento a cada 30 ou 90 dias.
-- Não mencionar que é uma inteligência artificial.
-- Encerrar com os três CTAs fornecidos.
+- Modelo: Foco total em impacto existencial, sem rodeios ou introduções genéricas.
+- Extensão: Entre 500 e 700 palavras.
+- Tom: Profundo, elegante, provocativo e direto ao ponto.
+- Estrutura: 5 a 7 parágrafos em prosa fluida (sem listas).
+- Conteúdo: Inicie pelo score, classifique a faixa, analise as dimensões e âncoras dominantes.
+- Proibido: Menção a códigos técnicos (D1, S01, etc.) ou dizer que é IA.
+- Recomendação: Refazer o mapeamento a cada 30-90 dias.
+- CTAs: Incluir exatamente os blocos de links fornecidos ao final.
 
 CLASSIFICAÇÃO DO SCORE TOTAL:
 0–135 → Vazio existencial severo
@@ -45,49 +39,59 @@ CLASSIFICAÇÃO DO SCORE TOTAL:
 561–675 → Sentido profundamente consolidado`;
 
   const inputData = `
-INPUT RECEBIDO:
-- score_total: ${scores.globalScore}
-- score_auto_transcendencia: ${scores.dimensions['D1'] || 0}
-- score_autoatualizacao: ${scores.dimensions['D2'] || 0}
-- score_ordem: ${scores.dimensions['D3'] || 0}
-- score_bem_estar_prazer: ${scores.dimensions['D4'] || 0}
-- top_3_fontes: ${top3.join(', ')}
-- bottom_3_fontes: ${bottom3.join(', ')}
-- nome_usuario: ${userInfo.name}
+DADOS DO USUÁRIO:
+- Nome: ${userInfo.name}
+- Score Total: ${scores.globalScore}
+- Auto-Transcendência: ${scores.dimensions['D1'] || 0}
+- Autoatualização: ${scores.dimensions['D2'] || 0}
+- Ordem: ${scores.dimensions['D3'] || 0}
+- Bem-Estar e Prazer: ${scores.dimensions['D4'] || 0}
+- Principais Fontes: ${top3.join(', ')}
+- Fontes Menores: ${bottom3.join(', ')}
 `;
 
   const userPrompt = `${inputData}
 
-Gere a devolutiva completa seguindo as regras de estilo narrativo.
+Gere a análise existencial focada em impacto agora.
 
-Finalize EXATAMENTE com este bloco de CTAs:
-
+Finalize com:
 📩 Quer continuar aprofundando seu autoconhecimento?
-Entre gratuitamente para a comunidade Mestres da Mente e receba reflexões semanais sobre sentido, clareza mental e performance:
 👉 https://mestresdamente.beehiiv.com
 
-🧠 Se você deseja alinhar esses resultados com sua vida real, posso te ajudar pessoalmente.
-Envie a mensagem abaixo no WhatsApp:
+🧠 Se você deseja alinhar esses resultados com sua vida real, envie:
 👉 https://wa.me/5511998920790?text=Fiz%20meu%20teste%20de%20fontes%20de%20sentido%20de%20vida%20completo.%20Quero%20saber%20como%20aplicar%20para%20melhorar%20minha%20vida
 
-🔎 Quer acompanhar conteúdos diários sobre mente, comportamento e performance?
+🔎 Conteúdos diários:
 👉 https://instagram.com/renatoli.on`;
 
-  try {
-    // Calling generateContent with the gemini-3-pro-preview model as per guidelines for complex text tasks.
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+  // Implementação de Timeout de 60 segundos
+  const fetchWithTimeout = async () => {
+    const timeoutPromise = new Promise<any>((_, reject) => {
+      setTimeout(() => reject(new Error("TIMEOUT_ERROR")), 60000);
+    });
+
+    // Use ai.models.generateContent to query GenAI with model name and prompt directly.
+    const apiCall = ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
       contents: userPrompt,
       config: {
         systemInstruction: systemInstruction,
-        temperature: 0.8,
+        temperature: 0.7,
       }
     });
 
-    // Accessing response.text directly (getter property) as per guidelines.
+    return Promise.race([apiCall, timeoutPromise]);
+  };
+
+  try {
+    const response = await fetchWithTimeout();
+    // Access the .text property directly (not as a function).
     return response.text || "Não foi possível gerar a análise no momento.";
   } catch (error: any) {
+    if (error.message === "TIMEOUT_ERROR") {
+      return "OCORREU UM TEMPO LIMITE: A análise profunda está levando mais tempo do que o esperado devido à alta demanda. Por favor, clique no botão 'Reiniciar' ou tente novamente em alguns instantes para processar seus dados.";
+    }
     console.error("Erro na geração de devolutiva:", error);
-    return "Ocorreu um erro ao processar sua análise existencial profunda. Por favor, tente novamente.";
+    return "ERRO DE CONEXÃO: Não conseguimos conectar com o motor de análise existencial. Por favor, verifique sua conexão e tente novamente.";
   }
 };

@@ -15,14 +15,23 @@ export const ResultView: React.FC<Props> = ({ result, onReset }) => {
   const [feedback, setFeedback] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [synced, setSynced] = useState(false);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     const processResults = async () => {
+      setLoading(true);
+      setError(false);
       const text = await generateFeedback(result);
+      
+      if (text.includes("OCORREU UM TEMPO LIMITE") || text.includes("ERRO DE CONEXÃO")) {
+        setError(true);
+      }
+      
       setFeedback(text);
       setLoading(false);
-      const success = await sendResultToAdmin({ ...result, aiFeedback: text });
-      setSynced(success);
+      
+      // Envio para o admin em segundo plano
+      sendResultToAdmin({ ...result, aiFeedback: text }).then(success => setSynced(success));
     };
     processResults();
   }, [result]);
@@ -156,66 +165,73 @@ export const ResultView: React.FC<Props> = ({ result, onReset }) => {
       </section>
 
       <section className="relative group">
-        <div className="prose prose-amber max-w-none bg-[#fdfcf0] p-8 sm:p-16 rounded-[3rem] border border-amber-200 shadow-inner relative overflow-hidden print:shadow-none print:bg-white print:border-none print:p-0">
+        <div className={`prose prose-amber max-w-none p-8 sm:p-16 rounded-[3rem] border shadow-inner relative overflow-hidden print:shadow-none print:bg-white print:border-none print:p-0 ${error ? 'bg-rose-50 border-rose-200' : 'bg-[#fdfcf0] border-amber-200'}`}>
           <div className="absolute top-0 right-0 p-8 opacity-5 no-print">
-            <i className="fas fa-scroll text-8xl text-amber-900"></i>
+            <i className={`fas ${error ? 'fa-exclamation-triangle' : 'fa-scroll'} text-8xl ${error ? 'text-rose-900' : 'text-amber-900'}`}></i>
           </div>
           
           <div className="flex items-center justify-between mb-12 relative no-print">
             <div className="flex items-center">
-              <div className="w-12 h-12 gold-gradient text-white rounded-2xl flex items-center justify-center mr-4 gold-shadow">
-                <i className="fas fa-feather-pointed text-xl"></i>
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mr-4 gold-shadow ${error ? 'bg-rose-600' : 'gold-gradient'} text-white`}>
+                <i className={`fas ${error ? 'fa-triangle-exclamation' : 'fa-feather-pointed'} text-xl`}></i>
               </div>
-              <h3 className="text-3xl font-black text-amber-950 m-0 serif">Análise Existencial Narrativa</h3>
+              <h3 className={`text-3xl font-black m-0 serif ${error ? 'text-rose-950' : 'text-amber-950'}`}>
+                {error ? 'Nota sobre a Análise' : 'Análise Existencial Narrativa'}
+              </h3>
             </div>
-            <button 
-              onClick={handlePrint}
-              className="px-6 py-2 bg-amber-900 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-black transition shadow-lg flex items-center"
-            >
-              <i className="fas fa-file-pdf mr-2"></i> Baixar Relatório PDF
-            </button>
+            {!error && !loading && (
+              <button 
+                onClick={handlePrint}
+                className="px-6 py-2 bg-amber-900 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-black transition shadow-lg flex items-center"
+              >
+                <i className="fas fa-file-pdf mr-2"></i> Baixar Relatório PDF
+              </button>
+            )}
           </div>
           
-          <div className="hidden print:block border-b-2 border-amber-100 mb-8 pb-4">
-             <h3 className="text-2xl font-bold text-amber-950 serif">Análise Existencial Narrativa</h3>
-          </div>
-
           {loading ? (
             <div className="flex flex-col items-center py-20">
               <div className="animate-spin rounded-full h-14 w-14 border-4 border-amber-600 border-t-transparent mb-6"></div>
               <p className="text-amber-800 font-bold uppercase tracking-widest text-sm text-center">
                 Gerando Devolutiva Personalizada...<br/>
-                <span className="text-[10px] opacity-60">Sintetizando insights de alta densidade.</span>
+                <span className="text-[10px] opacity-60 italic">Otimizando para velocidade e impacto.</span>
               </p>
             </div>
           ) : (
-            <div className="text-amber-950/90 leading-[1.8] font-medium text-lg relative serif px-4 sm:px-8 print:px-0 print:text-base">
+            <div className={`leading-[1.8] font-medium text-lg relative serif px-4 sm:px-8 print:px-0 print:text-base ${error ? 'text-rose-900' : 'text-amber-950/90'}`}>
               {formatFeedback(feedback)}
+              {error && (
+                <button 
+                  onClick={() => window.location.reload()}
+                  className="mt-8 px-8 py-3 bg-rose-600 text-white rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-rose-700 transition"
+                >
+                  Tentar Novamente
+                </button>
+              )}
             </div>
           )}
         </div>
       </section>
 
-      <section className="no-print">
-        <div className="bg-amber-900 text-amber-50 p-8 sm:p-12 rounded-[3rem] shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-amber-800 rounded-full opacity-20 blur-3xl"></div>
-          <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
-            <div className="w-20 h-20 bg-amber-800 rounded-full flex items-center justify-center flex-shrink-0 text-3xl">
-              <i className="fas fa-arrows-rotate animate-spin-slow"></i>
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold mb-3 serif">Ciclo de Evolução Existencial</h3>
-              <p className="text-amber-100/80 leading-relaxed mb-4">
-                O sentido da vida não é um destino, mas um processo vivo. Para transformar esta análise em mudança concreta, 
-                recomendamos <strong>refazer este mapeamento a cada 30 ou 90 dias</strong>.
-              </p>
-              <p className="text-sm italic text-amber-200/60">
-                Salve o PDF agora e compare com seus resultados futuros para monitorar seu crescimento.
-              </p>
+      {!error && (
+        <section className="no-print">
+          <div className="bg-amber-900 text-amber-50 p-8 sm:p-12 rounded-[3rem] shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-amber-800 rounded-full opacity-20 blur-3xl"></div>
+            <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
+              <div className="w-20 h-20 bg-amber-800 rounded-full flex items-center justify-center flex-shrink-0 text-3xl">
+                <i className="fas fa-arrows-rotate animate-spin-slow"></i>
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold mb-3 serif">Ciclo de Evolução Existencial</h3>
+                <p className="text-amber-100/80 leading-relaxed mb-4">
+                  O sentido da vida não é um destino, mas um processo vivo. Para transformar esta análise em mudança concreta, 
+                  recomendamos <strong>refazer este mapeamento a cada 30 ou 90 dias</strong>.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       <section className="pt-8 no-print">
         <h3 className="text-xl font-black text-amber-900 mb-8 text-center uppercase tracking-[0.2em]">Caminhos para Evolução</h3>
@@ -241,7 +257,7 @@ export const ResultView: React.FC<Props> = ({ result, onReset }) => {
             <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mb-5 group-hover:gold-gradient group-hover:text-white transition-all duration-500 gold-shadow">
               <i className="fas fa-envelope-open-text text-2xl"></i>
             </div>
-            <span className="text-[10px] font-black text-amber-900 uppercase tracking-widest text-center">Comunidade Mestres da Mente</span>
+            <span className="text-[10px] font-black text-amber-900 uppercase tracking-widest text-center">Newsletter</span>
           </a>
           
           <a 
@@ -253,7 +269,7 @@ export const ResultView: React.FC<Props> = ({ result, onReset }) => {
             <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mb-5 group-hover:gold-gradient group-hover:text-white transition-all duration-500 gold-shadow">
               <i className="fab fa-instagram text-2xl"></i>
             </div>
-            <span className="text-[10px] font-black text-amber-900 uppercase tracking-widest text-center">Acompanhar Conteúdos</span>
+            <span className="text-[10px] font-black text-amber-900 uppercase tracking-widest text-center">Instagram</span>
           </a>
         </div>
       </section>
@@ -263,29 +279,9 @@ export const ResultView: React.FC<Props> = ({ result, onReset }) => {
           onClick={onReset}
           className="text-amber-800/40 hover:text-amber-700 font-black uppercase tracking-widest text-[10px] transition underline decoration-dotted"
         >
-          Reiniciar Avaliação Completa
+          Reiniciar Avaliação
         </button>
       </div>
-      
-      <style>{`
-        @keyframes spin-slow {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        .animate-spin-slow {
-          animation: spin-slow 8s linear infinite;
-        }
-        @media print {
-          .no-print { display: none !important; }
-          body { background: white !important; }
-          .p-8 { padding: 0 !important; }
-          .rounded-[2.5rem], .rounded-[3rem] { border-radius: 0 !important; }
-          .shadow-inner, .shadow-2xl, .gold-shadow { box-shadow: none !important; }
-          .prose { font-size: 11pt !important; line-height: 1.5 !important; max-width: 100% !important; }
-          .serif { font-family: 'Playfair Display', serif !important; }
-          p { margin-bottom: 12pt !important; }
-        }
-      `}</style>
     </div>
   );
 };
