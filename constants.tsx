@@ -172,7 +172,7 @@ const D2_QUESTIONS_TEXT: Record<string, string[]> = {
     "Evito depender excessivamente da aprovação alheia.",
     "Tenho liberdade para escolher meu próprio caminho.",
     "Prefiro assumir responsabilidade pelas minhas escolhas.",
-    "Minha vida tem mais sentido quando ajo por decision própria."
+    "Minha vida tem mais sentido quando ajo por decisão própria."
   ]
 };
 
@@ -188,7 +188,7 @@ const D3_QUESTIONS_TEXT: Record<string, string[]> = {
     "Procuro agir de acordo com princípios éticos sólidos.",
     "Sinto desconforto quando ajo contra meus valores.",
     "Manter integridade é essencial para meu sentido de vida.",
-    "Tomo decisões baseadas no que considero correto, não apenas conveniente",
+    "Tomo decisões baseadas no que considero correto, não apenas conveniente.",
     "Agir moralmente é a base da minha paz interior."
   ],
   'S18': [

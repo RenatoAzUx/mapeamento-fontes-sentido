@@ -113,7 +113,8 @@ export const Assessment: React.FC<Props> = ({
       </div>
 
       <div className="flex-grow flex flex-col justify-center text-center">
-        <h2 className="text-2xl sm:text-3xl font-medium text-gray-800 mb-12 leading-tight px-4 italic serif">
+        {/* Estilo atualizado: sem-serifa (font-sans), tamanho 1.1rem (text-[1.1rem]), line-height 1.6 (leading-[1.6]) */}
+        <h2 className="font-sans text-[1.1rem] font-medium text-gray-700 mb-12 leading-[1.6] px-4">
           "{currentQuestion.text}"
         </h2>
 

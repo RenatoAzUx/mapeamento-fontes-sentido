@@ -4,16 +4,8 @@ import { AssessmentResult } from "../types";
 import { DIMENSIONS_MAP } from "../constants";
 
 export const generateFeedback = async (result: AssessmentResult): Promise<string> => {
-  // Em produção (Vercel/Netlify), a chave virá de process.env.API_KEY configurada no painel da plataforma.
-  // Em desenvolvimento local, ele tentará usar a chave disponível no contexto.
-  const apiKey = process.env.API_KEY;
-
-  if (!apiKey) {
-    console.error("API_KEY não encontrada. Certifique-se de configurá-la nas variáveis de ambiente.");
-    return "Erro de configuração: Chave de API não encontrada. Se você for o administrador, configure a API_KEY nas variáveis de ambiente.";
-  }
-
-  const ai = new GoogleGenAI({ apiKey });
+  // Always use process.env.API_KEY directly for initialization as per @google/genai guidelines.
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const { userInfo, scores } = result;
 
@@ -82,6 +74,7 @@ Envie a mensagem abaixo no WhatsApp:
 👉 https://instagram.com/renatoli.on`;
 
   try {
+    // Calling generateContent with the gemini-3-pro-preview model as per guidelines for complex text tasks.
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
       contents: userPrompt,
@@ -91,6 +84,7 @@ Envie a mensagem abaixo no WhatsApp:
       }
     });
 
+    // Accessing response.text directly (getter property) as per guidelines.
     return response.text || "Não foi possível gerar a análise no momento.";
   } catch (error: any) {
     console.error("Erro na geração de devolutiva:", error);
