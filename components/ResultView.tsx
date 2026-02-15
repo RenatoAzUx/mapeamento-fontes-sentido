@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { AssessmentResult } from '../types';
 import { generateFeedback } from '../services/gemini';
 import { sendResultToAdmin } from '../services/notifications';
@@ -19,10 +19,15 @@ export const ResultView: React.FC<Props> = ({ result, onReset }) => {
   const [syncError, setSyncError] = useState(false);
   const [error, setError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-  const [isMounted, setIsMounted] = useState(false);
+  const [isReadyForCharts, setIsReadyForCharts] = useState(false);
+  const chartContainerRef = useRef<HTMLDivElement>(null);
 
+  // Aguarda o layout estabilizar antes de montar os gráficos
   useEffect(() => {
-    setIsMounted(true);
+    const timer = setTimeout(() => {
+      setIsReadyForCharts(true);
+    }, 800);
+    return () => clearTimeout(timer);
   }, []);
 
   const processResults = useCallback(async () => {
@@ -31,10 +36,9 @@ export const ResultView: React.FC<Props> = ({ result, onReset }) => {
     setSyncing(false);
     
     try {
-      // Cria uma nova instância e gera o conteúdo conforme as diretrizes
       const text = await generateFeedback(result);
       
-      if (text.startsWith("TIMEOUT") || text.startsWith("ERRO_API") || text.startsWith("Erro:")) {
+      if (text.startsWith("ERRO_API") || text.startsWith("TIMEOUT") || text.startsWith("Erro:")) {
         setError(true);
         setFeedback(text);
         setLoading(false);
@@ -61,7 +65,7 @@ export const ResultView: React.FC<Props> = ({ result, onReset }) => {
     } catch (err: any) {
       console.error("Fatal Error UI:", err);
       setError(true);
-      setFeedback(`Erro fatal: ${err.message || "Falha na comunicação com o motor existencial."}`);
+      setFeedback(`Erro fatal: ${err.message || "Falha na IA."}`);
       setLoading(false);
       setSyncing(false);
     }
@@ -101,11 +105,11 @@ export const ResultView: React.FC<Props> = ({ result, onReset }) => {
         <div className="text-center py-8">
           <div className="mb-6 p-6 bg-rose-50 rounded-[2rem] border border-rose-100 shadow-sm">
             <i className="fas fa-exclamation-triangle text-rose-400 text-3xl mb-4"></i>
-            <p className="text-rose-900 font-bold mb-2">Falha na Conexão Existencial</p>
-            <p className="text-rose-800/60 text-xs italic mb-4">{text}</p>
-            <p className="text-[10px] text-rose-900/40 uppercase font-black tracking-widest">
-              Dica: Verifique se a API_KEY está configurada corretamente no painel da Vercel.
-            </p>
+            <p className="text-rose-900 font-bold mb-2">Atenção ao Sistema</p>
+            <p className="text-rose-800/60 text-[11px] leading-relaxed italic mb-4">{text}</p>
+            <div className="text-[9px] text-rose-900/40 uppercase font-black tracking-widest bg-white/50 p-3 rounded-xl border border-rose-100/50">
+              Dica: Verifique se a chave VITE_API_KEY está correta na Vercel e se o deploy terminou.
+            </div>
           </div>
           <button 
             onClick={() => {
@@ -149,15 +153,10 @@ export const ResultView: React.FC<Props> = ({ result, onReset }) => {
            ) : syncError ? (
              <>
                <i className="fas fa-exclamation-circle text-rose-400 text-xs"></i>
-               <span className="text-[10px] font-black text-rose-900/40 uppercase tracking-widest">Modo Offline</span>
-             </>
-           ) : error ? (
-             <>
-               <i className="fas fa-times-circle text-rose-300 text-xs"></i>
-               <span className="text-[10px] font-black text-rose-900/30 uppercase tracking-widest">Erro na Geração</span>
+               <span className="text-[10px] font-black text-rose-900/40 uppercase tracking-widest">Acesso Offline</span>
              </>
            ) : (
-             <span className="text-[10px] font-black text-amber-900/30 uppercase tracking-widest">Processando...</span>
+             <span className="text-[10px] font-black text-amber-900/30 uppercase tracking-widest">IA Conectada</span>
            )}
         </div>
         
@@ -178,11 +177,11 @@ export const ResultView: React.FC<Props> = ({ result, onReset }) => {
       </section>
 
       <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="bg-amber-50/20 p-8 rounded-[2.5rem] border border-amber-100 min-h-[350px]">
+        <div className="bg-amber-50/20 p-8 rounded-[2.5rem] border border-amber-100 min-h-[350px] flex flex-col">
           <h3 className="text-lg font-black text-amber-900 mb-6 uppercase tracking-widest text-center">Dimensões</h3>
-          <div className="h-64 w-full">
-            {isMounted && (
-              <ResponsiveContainer width="100%" height="100%">
+          <div className="flex-grow w-full relative" ref={chartContainerRef}>
+            {isReadyForCharts && (
+              <ResponsiveContainer width="99%" height={250}>
                 <BarChart data={dimensionData} layout="vertical" margin={{ left: -10, right: 30 }}>
                   <XAxis type="number" hide domain={[0, 200]} />
                   <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 9, fontWeight: 'bold', fill: '#92400e' }} />
@@ -208,7 +207,7 @@ export const ResultView: React.FC<Props> = ({ result, onReset }) => {
       </section>
 
       <section className="relative group">
-        <div className={`prose prose-amber max-w-none p-8 sm:p-16 rounded-[3rem] border shadow-inner relative overflow-hidden print:p-0 min-h-[400px] flex flex-col justify-center transition-colors duration-500 ${error ? 'bg-rose-50 border-rose-200' : 'bg-[#fdfcf0] border-amber-200'}`}>
+        <div className={`prose prose-amber max-w-none p-8 sm:p-16 rounded-[3rem] border shadow-inner relative overflow-hidden print:p-0 min-h-[400px] flex flex-col justify-center transition-all duration-500 ${error ? 'bg-rose-50 border-rose-200' : 'bg-[#fdfcf0] border-amber-200'}`}>
           {!loading && (
             <div className="absolute top-0 right-0 p-8 opacity-5 no-print">
               <i className={`fas ${error ? 'fa-triangle-exclamation' : 'fa-scroll'} text-8xl ${error ? 'text-rose-900' : 'text-amber-900'}`}></i>
@@ -217,11 +216,11 @@ export const ResultView: React.FC<Props> = ({ result, onReset }) => {
           
           <div className="flex items-center justify-between mb-12 relative no-print">
             <div className="flex items-center">
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mr-4 gold-shadow ${error ? 'bg-rose-600' : 'gold-gradient'} text-white transition-colors duration-500`}>
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mr-4 gold-shadow ${error ? 'bg-rose-600' : 'gold-gradient'} text-white transition-all duration-500`}>
                 <i className={`fas ${error ? 'fa-exclamation' : 'fa-feather-pointed'} text-xl`}></i>
               </div>
               <h3 className={`text-3xl font-black m-0 serif ${error ? 'text-rose-950' : 'text-amber-950'}`}>
-                {error ? 'Nota de Sistema' : 'Análise Existencial'}
+                {error ? 'Status da Geração' : 'Análise Existencial'}
               </h3>
             </div>
             {!error && !loading && (
@@ -236,7 +235,7 @@ export const ResultView: React.FC<Props> = ({ result, onReset }) => {
               <div className="animate-spin rounded-full h-14 w-14 border-4 border-amber-600 border-t-transparent mb-6"></div>
               <p className="text-amber-800 font-bold uppercase tracking-widest text-sm text-center">
                 Gerando Devolutiva...<br/>
-                <span className="text-[10px] opacity-60 italic">Processando clareza e impacto existencial com o Gemini.</span>
+                <span className="text-[10px] opacity-60 italic">Construindo insights profundos com Gemini.</span>
               </p>
             </div>
           ) : (

@@ -4,9 +4,13 @@ import { AssessmentResult } from "../types";
 import { DIMENSIONS_MAP } from "../constants";
 
 export const generateFeedback = async (result: AssessmentResult): Promise<string> => {
-  // Conforme diretrizes, o API_KEY deve ser acessado exclusivamente via process.env.API_KEY
-  // e passado DIRETAMENTE no construtor para garantir a substituição correta pelo bundler/ambiente.
+  // O Vite substituirá 'process.env.API_KEY' pelo valor configurado no vite.config.ts
+  if (!process.env.API_KEY || process.env.API_KEY === "" || process.env.API_KEY === "undefined") {
+    return "ERRO_API: Chave de acesso não detectada. Verifique se 'VITE_API_KEY' está configurada no painel da Vercel e realize um novo deploy.";
+  }
+
   try {
+    // Fix: Always use process.env.API_KEY directly when initializing the GoogleGenAI instance.
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const { userInfo, scores } = result;
 
@@ -39,8 +43,7 @@ Finalize com:
 🧠 Consultoria: https://wa.me/5511998920790?text=Fiz%20meu%20mapeamento.%20Quero%20aplicar.
 🔎 Instagram: https://instagram.com/renatoli.on`;
 
-    // Updated to gemini-3-pro-preview as existential analysis involves complex reasoning and high-quality generation.
-    // Removed unused AbortController as it is not supported in the generateContent call parameters of @google/genai.
+    // Fix: Use ai.models.generateContent directly to query GenAI with model and prompt.
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
       contents: userPrompt,
@@ -50,15 +53,14 @@ Finalize com:
       }
     });
 
-    // Access the .text property directly as per the official SDK documentation.
+    // Fix: Use the .text property to access generated content (not a method).
     return response.text || "Erro: Conteúdo não gerado.";
 
   } catch (error: any) {
     console.error("DEBUG GEMINI ERROR:", error);
     
-    // Simple error categorization based on message content.
     if (error.message?.includes("API Key") || error.message?.includes("key")) {
-      return "ERRO_API: Chave de acesso não detectada ou inválida. Verifique as configurações de ambiente.";
+      return "ERRO_API: Chave inválida ou erro de cota. Verifique as configurações no Google AI Studio.";
     }
 
     return `ERRO_API: ${error.message || "Falha na conexão com a inteligência artificial."}`;
