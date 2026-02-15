@@ -1,10 +1,10 @@
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { AssessmentResult } from '../types';
 import { generateFeedback } from '../services/gemini';
 import { sendResultToAdmin } from '../services/notifications';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { DIMENSIONS_MAP } from '../constants';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 
 interface Props {
   result: AssessmentResult;
@@ -22,7 +22,6 @@ export const ResultView: React.FC<Props> = ({ result, onReset }) => {
   const [isReadyForCharts, setIsReadyForCharts] = useState(false);
   const chartContainerRef = useRef<HTMLDivElement>(null);
 
-  // Aguarda o layout estabilizar antes de montar os gráficos
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsReadyForCharts(true);
@@ -33,16 +32,14 @@ export const ResultView: React.FC<Props> = ({ result, onReset }) => {
   const processResults = useCallback(async () => {
     setLoading(true);
     setError(false);
-    setSyncing(false);
     
     try {
       const text = await generateFeedback(result);
       
-      if (text.startsWith("ERRO_API") || text.startsWith("TIMEOUT") || text.startsWith("Erro:")) {
+      if (text.startsWith("ERRO_API") || text.startsWith("ERRO_SISTEMA") || text.startsWith("Erro:")) {
         setError(true);
         setFeedback(text);
         setLoading(false);
-        setSyncing(false);
         return;
       }
       
@@ -63,11 +60,9 @@ export const ResultView: React.FC<Props> = ({ result, onReset }) => {
           });
       }
     } catch (err: any) {
-      console.error("Fatal Error UI:", err);
       setError(true);
       setFeedback(`Erro fatal: ${err.message || "Falha na IA."}`);
       setLoading(false);
-      setSyncing(false);
     }
   }, [result, synced]);
 
@@ -106,18 +101,9 @@ export const ResultView: React.FC<Props> = ({ result, onReset }) => {
           <div className="mb-6 p-6 bg-rose-50 rounded-[2rem] border border-rose-100 shadow-sm">
             <i className="fas fa-exclamation-triangle text-rose-400 text-3xl mb-4"></i>
             <p className="text-rose-900 font-bold mb-2">Atenção ao Sistema</p>
-            <p className="text-rose-800/60 text-[11px] leading-relaxed italic mb-4">{text}</p>
-            <div className="text-[9px] text-rose-900/40 uppercase font-black tracking-widest bg-white/50 p-3 rounded-xl border border-rose-100/50">
-              Dica: Verifique se a chave VITE_API_KEY está correta na Vercel e se o deploy terminou.
-            </div>
+            <p className="text-rose-800/60 text-[11px] leading-relaxed italic">{text}</p>
           </div>
-          <button 
-            onClick={() => {
-              setLoading(true);
-              setRetryCount(prev => prev + 1);
-            }}
-            className="px-10 py-4 bg-rose-600 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-rose-700 transition shadow-xl"
-          >
+          <button onClick={() => setRetryCount(prev => prev + 1)} className="px-10 py-4 bg-rose-600 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-rose-700 transition shadow-xl">
             Tentar Gerar Novamente
           </button>
         </div>
@@ -139,30 +125,19 @@ export const ResultView: React.FC<Props> = ({ result, onReset }) => {
   return (
     <div className="p-8 sm:p-12 space-y-12 bg-white animate-in fade-in duration-1000">
       <section className="text-center">
-        <div className="inline-flex items-center space-x-2 mb-4 bg-amber-50 px-4 py-1.5 rounded-full border border-amber-100 no-print min-w-[160px] justify-center transition-all duration-500">
+        <div className="inline-flex items-center space-x-2 mb-4 bg-amber-50 px-4 py-1.5 rounded-full border border-amber-100 no-print min-w-[160px] justify-center">
            {synced ? (
-             <>
-               <i className="fas fa-check-circle text-emerald-500 text-xs"></i>
-               <span className="text-[10px] font-black text-amber-900/60 uppercase tracking-widest">Relatório Salvo</span>
-             </>
+             <><i className="fas fa-check-circle text-emerald-500 text-xs"></i><span className="text-[10px] font-black text-amber-900/60 uppercase tracking-widest">Relatório Salvo</span></>
            ) : syncing ? (
-             <>
-               <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
-               <span className="text-[10px] font-black text-amber-900/60 uppercase tracking-widest">Sincronizando...</span>
-             </>
+             <><div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div><span className="text-[10px] font-black text-amber-900/60 uppercase tracking-widest">Sincronizando...</span></>
            ) : syncError ? (
-             <>
-               <i className="fas fa-exclamation-circle text-rose-400 text-xs"></i>
-               <span className="text-[10px] font-black text-rose-900/40 uppercase tracking-widest">Acesso Offline</span>
-             </>
+             <><i className="fas fa-exclamation-circle text-rose-400 text-xs"></i><span className="text-[10px] font-black text-rose-900/40 uppercase tracking-widest">Acesso Offline</span></>
            ) : (
              <span className="text-[10px] font-black text-amber-900/30 uppercase tracking-widest">IA Conectada</span>
            )}
         </div>
-        
         <h2 className="text-4xl font-bold text-gray-900 mb-2 serif">Seu Perfil de Sentido</h2>
         <p className="text-amber-900/40 font-medium italic">Análise de Vitalidade para {result.userInfo.name}</p>
-        
         <div className="mt-8 relative inline-block">
           <svg className="w-48 h-48 filter drop-shadow-xl">
             <circle className="text-amber-50" strokeWidth="8" stroke="currentColor" fill="transparent" r="75" cx="96" cy="96" />
@@ -185,14 +160,13 @@ export const ResultView: React.FC<Props> = ({ result, onReset }) => {
                 <BarChart data={dimensionData} layout="vertical" margin={{ left: -10, right: 30 }}>
                   <XAxis type="number" hide domain={[0, 200]} />
                   <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 9, fontWeight: 'bold', fill: '#92400e' }} />
-                  <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
+                  <Tooltip cursor={{ fill: 'transparent' }} />
                   <Bar dataKey="score" fill="#b45309" radius={[0, 10, 10, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
           </div>
         </div>
-
         <div className="bg-amber-50/20 p-8 rounded-[2.5rem] border border-amber-100 min-h-[350px]">
           <h3 className="text-lg font-black text-amber-900 mb-6 uppercase tracking-widest text-center">Âncoras Dominantes</h3>
           <ul className="space-y-4">
@@ -207,16 +181,10 @@ export const ResultView: React.FC<Props> = ({ result, onReset }) => {
       </section>
 
       <section className="relative group">
-        <div className={`prose prose-amber max-w-none p-8 sm:p-16 rounded-[3rem] border shadow-inner relative overflow-hidden print:p-0 min-h-[400px] flex flex-col justify-center transition-all duration-500 ${error ? 'bg-rose-50 border-rose-200' : 'bg-[#fdfcf0] border-amber-200'}`}>
-          {!loading && (
-            <div className="absolute top-0 right-0 p-8 opacity-5 no-print">
-              <i className={`fas ${error ? 'fa-triangle-exclamation' : 'fa-scroll'} text-8xl ${error ? 'text-rose-900' : 'text-amber-900'}`}></i>
-            </div>
-          )}
-          
+        <div className={`prose prose-amber max-w-none p-8 sm:p-16 rounded-[3rem] border shadow-inner relative overflow-hidden print:shadow-none print:border-amber-100 ${error ? 'bg-rose-50 border-rose-200' : 'bg-[#fdfcf0] border-amber-200'}`}>
           <div className="flex items-center justify-between mb-12 relative no-print">
             <div className="flex items-center">
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mr-4 gold-shadow ${error ? 'bg-rose-600' : 'gold-gradient'} text-white transition-all duration-500`}>
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mr-4 gold-shadow ${error ? 'bg-rose-600' : 'gold-gradient'} text-white`}>
                 <i className={`fas ${error ? 'fa-exclamation' : 'fa-feather-pointed'} text-xl`}></i>
               </div>
               <h3 className={`text-3xl font-black m-0 serif ${error ? 'text-rose-950' : 'text-amber-950'}`}>
@@ -233,15 +201,64 @@ export const ResultView: React.FC<Props> = ({ result, onReset }) => {
           {loading ? (
             <div className="flex flex-col items-center py-20">
               <div className="animate-spin rounded-full h-14 w-14 border-4 border-amber-600 border-t-transparent mb-6"></div>
-              <p className="text-amber-800 font-bold uppercase tracking-widest text-sm text-center">
-                Gerando Devolutiva...<br/>
-                <span className="text-[10px] opacity-60 italic">Construindo insights profundos com Gemini.</span>
-              </p>
+              <p className="text-amber-800 font-bold uppercase tracking-widest text-sm text-center">Gerando Devolutiva Clínica...</p>
             </div>
           ) : (
-            <div className={`leading-[1.8] font-medium text-lg relative serif px-4 sm:px-8 print:px-0 print:text-base ${error ? 'text-rose-900' : 'text-amber-950/90'}`}>
-              {formatFeedback(feedback)}
-            </div>
+            <>
+              <div className={`leading-[1.8] font-medium text-lg relative serif px-4 sm:px-8 print:px-0 print:text-base ${error ? 'text-rose-900' : 'text-amber-950/90'}`}>
+                {formatFeedback(feedback)}
+              </div>
+              
+              {!error && (
+                <div className="mt-16 pt-12 border-t border-amber-200/50 space-y-8">
+                  <h4 className="text-center text-amber-900/50 uppercase tracking-[0.2em] font-black text-[10px] mb-10">Caminhos para Evolução</h4>
+                  
+                  <div className="grid grid-cols-1 gap-6 max-w-2xl mx-auto">
+                    {/* Botão WhatsApp */}
+                    <div className="group">
+                      <p className="text-sm font-bold text-amber-900/60 mb-3 ml-1 italic">Para decifrar seus pontos cegos com minha orientação direta</p>
+                      <a 
+                        href="https://wa.me/5511998920790?text=Fiz%20meu%20mapeamento.%20Quero%20aplicar." 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center w-full px-8 py-5 gold-gradient text-white rounded-[1.5rem] font-black uppercase tracking-widest text-xs shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 active:scale-95"
+                      >
+                        <i className="fab fa-whatsapp text-xl mr-3"></i>
+                        Consulta de Alinhamento Exclusiva
+                      </a>
+                    </div>
+
+                    {/* Botão Newsletter */}
+                    <div className="group">
+                      <p className="text-sm font-bold text-amber-900/60 mb-3 ml-1 italic">Para manter o desenvolvimento constante lado a lado com outros líderes</p>
+                      <a 
+                        href="https://mestresdamente.beehiiv.com" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center w-full px-8 py-5 bg-amber-900 text-amber-50 rounded-[1.5rem] font-black uppercase tracking-widest text-xs shadow-lg hover:shadow-xl hover:bg-black hover:scale-[1.02] transition-all duration-300 active:scale-95"
+                      >
+                        <i className="fas fa-users text-xl mr-3"></i>
+                        Comunidade Mestres da Mente
+                      </a>
+                    </div>
+
+                    {/* Botão Instagram */}
+                    <div className="group">
+                      <p className="text-sm font-bold text-amber-900/60 mb-3 ml-1 italic">Para insights diários sobre neurociência e comportamento</p>
+                      <a 
+                        href="https://instagram.com/renatoli.on" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center w-full px-8 py-5 border-2 border-amber-900 text-amber-900 rounded-[1.5rem] font-black uppercase tracking-widest text-xs hover:bg-amber-900/5 hover:scale-[1.02] transition-all duration-300 active:scale-95"
+                      >
+                        <i className="fab fa-instagram text-xl mr-3"></i>
+                        Conectar no Instagram
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>

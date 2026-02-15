@@ -1,20 +1,18 @@
 
-import {GoogleGenAI} from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { AssessmentResult } from "../types";
 import { DIMENSIONS_MAP } from "../constants";
 
-// Fix: Access API key exclusively through process.env.API_KEY as per SDK guidelines.
-// This resolves the TypeScript error related to import.meta.env not existing on ImportMeta.
 export const generateFeedback = async (result: AssessmentResult): Promise<string> => {
+  // A chave é provida via process.env.API_KEY injetado pelo define do Vite no build
   const apiKey = process.env.API_KEY;
 
-  if (!apiKey) {
-    return "ERRO_API: Chave de acesso não detectada. Verifique se a variável 'API_KEY' está configurada.";
+  if (!apiKey || apiKey === "" || apiKey === "undefined") {
+    return "ERRO_CONFIG: Chave de API não encontrada no ambiente de execução.";
   }
 
   try {
-    // Fix: Always initialize with a named parameter: new GoogleGenAI({ apiKey: process.env.API_KEY })
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey });
     const { userInfo, scores } = result;
 
     const sourceNameMap = DIMENSIONS_MAP.reduce((acc, dim) => {
@@ -24,49 +22,48 @@ export const generateFeedback = async (result: AssessmentResult): Promise<string
 
     const sortedSources = Object.entries(scores.sources)
       .sort((a, b) => (b[1] as number) - (a[1] as number));
+    
+    const top3 = sortedSources.slice(0, 3).map(([code, score]) => `${sourceNameMap[code]} (${score}/25)`);
+    const bottom3 = sortedSources.slice(-3).map(([code, score]) => `${sourceNameMap[code]} (${score}/25)`);
 
-    const top3 = sortedSources.slice(0, 3).map(([code, score]) => `${sourceNameMap[code]} (${score} pts)`);
+    const systemInstruction = `Você é um Neurocientista do Comportamento e Psicoterapeuta de linha Estoica. 
+Sua função é realizar uma análise clínica e existencial seca, objetiva e pragmática.
 
-    const systemInstruction = `Você é um analista existencial. Gere uma devolutiva rápida e impactante.
-Regras:
-- Tamanho: 400 a 500 palavras.
-- Tom: Profundo, elegante e transformador.
-- Sem introduções genéricas. Vá direto ao ponto.
-- Proibido usar listas ou bullet points.
-- Terminar obrigatoriamente com os links de contato fornecidos.`;
+DIRETRIZES DE LINGUAGEM E TOM:
+- Proibido o uso de adjetivos grandiloquentes ou "puxa-saquismo" (ex: magnífico, mandato estrutural, ser iluminado).
+- Use terminologia técnica precisa: "tensões funcionais", "âncoras de execução", "desafios biopsicossociais", "homeostase existencial".
+- O tom é de um diagnóstico técnico-existencial: frio, preciso e voltado para a eficácia da ação.
 
-    const inputData = `Nome: ${userInfo.name} | Score: ${scores.globalScore} | Top 3: ${top3.join(', ')}`;
+ESTRUTURA DA ANÁLISE:
+1. MAPEAMENTO DE TENSÕES: Analise o conflito funcional entre as pontuações. (Ex: Criatividade alta + Ordem alta = Risco de paralisia analítica. Razão alta + Prazer baixo = Rigidez cognitiva e anedonia funcional).
+2. ÂNCORAS DE EXECUÇÃO: Como as fontes dominantes devem ser usadas para estabilizar o sistema nervoso e garantir a execução diária.
+3. TAREFAS DE SENTIDO (Viktor Frankl): Defina 3 ações concretas. "Quem o sujeito é" importa menos do que "o que este perfil exige que ele faça agora".
+4. TRANSIÇÃO: Prepare o terreno para os próximos passos, explicando que a complexidade deste arranjo exige acompanhamento profissional ou inserção em comunidade para evitar que as tensões se tornem patológicas.
 
-    const userPrompt = `${inputData}
+A análise deve ter entre 400 e 500 palavras. Não use listas ou bullet points.`;
 
-Gere agora a análise existencial (400-500 palavras).
+    const inputData = `
+PACIENTE: ${userInfo.name}
+SCORE GLOBAL: ${scores.globalScore}/675
+FONTES DOMINANTES: ${top3.join(', ')}
+FONTES DE BAIXA ATIVAÇÃO: ${bottom3.join(', ')}
+DIMENSÕES: Auto-Transcendência (${scores.dimensions['D1']}), Autoatualização (${scores.dimensions['D2']}), Ordem (${scores.dimensions['D3']}), Bem-estar (${scores.dimensions['D4']}).
+    `;
 
-Finalize com:
-📩 Newsletter: https://mestresdamente.beehiiv.com
-🧠 Consultoria: https://wa.me/5511998920790?text=Fiz%20meu%20mapeamento.%20Quero%20aplicar.
-🔎 Instagram: https://instagram.com/renatoli.on`;
-
-    // Fix: Use 'gemini-3-pro-preview' for advanced reasoning and complex text generation tasks.
-    // Prohibited models like 'gemini-1.5-flash' must not be used.
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
-      contents: userPrompt,
+      contents: `Analise clinicamente este perfil existencial de acordo com suas diretrizes:\n${inputData}`,
       config: {
         systemInstruction: systemInstruction,
-        temperature: 0.8,
+        temperature: 0.7,
+        topP: 0.9,
       }
     });
 
-    // Fix: Access generated text via the .text property (not a method call).
-    return response.text || "Erro: Conteúdo não gerado pela inteligência artificial.";
+    return response.text || "Erro: O motor de análise não retornou dados.";
 
   } catch (error: any) {
     console.error("DEBUG GEMINI ERROR:", error);
-    
-    if (error.message?.includes("API key not valid")) {
-      return "ERRO_API: A chave de API fornecida é inválida.";
-    }
-
-    return `ERRO_API: ${error.message || "Falha na conexão com o servidor de análise."}`;
+    return `ERRO_SISTEMA: ${error.message || "Falha na modulação do feedback clínico."}`;
   }
 };
