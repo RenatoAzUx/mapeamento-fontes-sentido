@@ -4,7 +4,6 @@ import { AssessmentResult } from "../types";
 import { DIMENSIONS_MAP } from "../constants";
 
 export const generateFeedback = async (result: AssessmentResult): Promise<string> => {
-  // A chave é provida via process.env.API_KEY injetado pelo define do Vite no build
   const apiKey = process.env.API_KEY;
 
   if (!apiKey || apiKey === "" || apiKey === "undefined") {
@@ -26,21 +25,21 @@ export const generateFeedback = async (result: AssessmentResult): Promise<string
     const top3 = sortedSources.slice(0, 3).map(([code, score]) => `${sourceNameMap[code]} (${score}/25)`);
     const bottom3 = sortedSources.slice(-3).map(([code, score]) => `${sourceNameMap[code]} (${score}/25)`);
 
-    const systemInstruction = `Você é um Neurocientista do Comportamento e Psicoterapeuta de linha Estoica. 
-Sua função é realizar uma análise clínica e existencial seca, objetiva e pragmática.
+    const systemInstruction = `Você é um Neurocientista do Comportamento e Psicoterapeuta de linha Estoica, especialista no framework da Dra. Tatjana Schnell (Sources of Meaning).
 
-DIRETRIZES DE LINGUAGEM E TOM:
-- Proibido o uso de adjetivos grandiloquentes ou "puxa-saquismo" (ex: magnífico, mandato estrutural, ser iluminado).
-- Use terminologia técnica precisa: "tensões funcionais", "âncoras de execução", "desafios biopsicossociais", "homeostase existencial".
-- O tom é de um diagnóstico técnico-existencial: frio, preciso e voltado para a eficácia da ação.
+DIRETRIZES DE ANÁLISE:
+1. ANÁLISE DE CONTRASTE: Identifique as tensões entre suas fontes mais fortes (ex: Autoatualização) e as mais baixas (ex: Ordem ou Bem-estar). Não descreva o sujeito, descreva o conflito funcional do sistema.
+2. LINGUAGEM TÉCNICA: Use termos como "viés de hiper-foco", "regulação comportamental", "clareza executiva", "homeostase existencial" e "âncoras de execução".
+3. PRAGMATISMO: Menos "você é" e mais "seu perfil exige estas ações/ajustes". Foque na 'Tarefa de Sentido' de Viktor Frankl.
+4. PROIBIÇÕES: Proibido o uso de adjetivos grandiloquentes, elogios ou links internos.
 
-ESTRUTURA DA ANÁLISE:
-1. MAPEAMENTO DE TENSÕES: Analise o conflito funcional entre as pontuações. (Ex: Criatividade alta + Ordem alta = Risco de paralisia analítica. Razão alta + Prazer baixo = Rigidez cognitiva e anedonia funcional).
-2. ÂNCORAS DE EXECUÇÃO: Como as fontes dominantes devem ser usadas para estabilizar o sistema nervoso e garantir a execução diária.
-3. TAREFAS DE SENTIDO (Viktor Frankl): Defina 3 ações concretas. "Quem o sujeito é" importa menos do que "o que este perfil exige que ele faça agora".
-4. TRANSIÇÃO: Prepare o terreno para os próximos passos, explicando que a complexidade deste arranjo exige acompanhamento profissional ou inserção em comunidade para evitar que as tensões se tornem patológicas.
+ESTRUTURA OBRIGATÓRIA:
+- PARÁGRAFO 1: Diagnóstico de Contraste (Tensões entre pontos altos e baixos).
+- PARÁGRAFO 2: Riscos de Regulação (O que acontece se o sistema não for equilibrado).
+- PARÁGRAFO 3: Tarefas de Execução (Ações práticas imediatas).
+- CONCLUSÃO: Uma frase final seca afirmando que, devido à complexidade das tensões identificadas, o próximo passo exige o alinhamento profissional e a inserção em comunidade através dos botões de ação logo abaixo.
 
-A análise deve ter entre 400 e 500 palavras. Não use listas ou bullet points.`;
+Tamanho: 400 a 500 palavras. Texto corrido sem bullet points.`;
 
     const inputData = `
 PACIENTE: ${userInfo.name}
@@ -52,7 +51,7 @@ DIMENSÕES: Auto-Transcendência (${scores.dimensions['D1']}), Autoatualização
 
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
-      contents: `Analise clinicamente este perfil existencial de acordo com suas diretrizes:\n${inputData}`,
+      contents: `Analise clinicamente este perfil existencial sob o framework da Dra. Tatjana Schnell:\n${inputData}`,
       config: {
         systemInstruction: systemInstruction,
         temperature: 0.7,

@@ -208,60 +208,76 @@ export const ResultView: React.FC<Props> = ({ result, onReset }) => {
               <div className={`leading-[1.8] font-medium text-lg relative serif px-4 sm:px-8 print:px-0 print:text-base ${error ? 'text-rose-900' : 'text-amber-950/90'}`}>
                 {formatFeedback(feedback)}
               </div>
-              
-              {!error && (
-                <div className="mt-16 pt-12 border-t border-amber-200/50 space-y-8">
-                  <h4 className="text-center text-amber-900/50 uppercase tracking-[0.2em] font-black text-[10px] mb-10">Caminhos para Evolução</h4>
-                  
-                  <div className="grid grid-cols-1 gap-6 max-w-2xl mx-auto">
-                    {/* Botão WhatsApp */}
-                    <div className="group">
-                      <p className="text-sm font-bold text-amber-900/60 mb-3 ml-1 italic">Para decifrar seus pontos cegos com minha orientação direta</p>
-                      <a 
-                        href="https://wa.me/5511998920790?text=Fiz%20meu%20mapeamento.%20Quero%20aplicar." 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-center w-full px-8 py-5 gold-gradient text-white rounded-[1.5rem] font-black uppercase tracking-widest text-xs shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 active:scale-95"
-                      >
-                        <i className="fab fa-whatsapp text-xl mr-3"></i>
-                        Consulta de Alinhamento Exclusiva
-                      </a>
-                    </div>
-
-                    {/* Botão Newsletter */}
-                    <div className="group">
-                      <p className="text-sm font-bold text-amber-900/60 mb-3 ml-1 italic">Para manter o desenvolvimento constante lado a lado com outros líderes</p>
-                      <a 
-                        href="https://mestresdamente.beehiiv.com" 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-center w-full px-8 py-5 bg-amber-900 text-amber-50 rounded-[1.5rem] font-black uppercase tracking-widest text-xs shadow-lg hover:shadow-xl hover:bg-black hover:scale-[1.02] transition-all duration-300 active:scale-95"
-                      >
-                        <i className="fas fa-users text-xl mr-3"></i>
-                        Comunidade Mestres da Mente
-                      </a>
-                    </div>
-
-                    {/* Botão Instagram */}
-                    <div className="group">
-                      <p className="text-sm font-bold text-amber-900/60 mb-3 ml-1 italic">Para insights diários sobre neurociência e comportamento</p>
-                      <a 
-                        href="https://instagram.com/renatoli.on" 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-center w-full px-8 py-5 border-2 border-amber-900 text-amber-900 rounded-[1.5rem] font-black uppercase tracking-widest text-xs hover:bg-amber-900/5 hover:scale-[1.02] transition-all duration-300 active:scale-95"
-                      >
-                        <i className="fab fa-instagram text-xl mr-3"></i>
-                        Conectar no Instagram
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              )}
             </>
           )}
         </div>
       </section>
+
+      {/* Nova Seção: Plano de Ação e Conexão */}
+      {!loading && !error && (
+        <section className="animate-in slide-in-from-bottom duration-1000 delay-300">
+          <div className="text-center mb-10">
+            <h3 className="text-2xl font-black text-amber-950 serif">Plano de Ação e Conexão</h3>
+            <p className="text-amber-900/40 font-bold uppercase tracking-widest text-[10px] mt-2">Próximos Passos Obrigatórios</p>
+          </div>
+          
+          <div className="space-y-6">
+            {/* Card 1: WhatsApp */}
+            <a 
+              href="https://wa.me/5511998920790?text=Fiz%20meu%20mapeamento.%20Quero%20aplicar." 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="group block bg-amber-50 hover:bg-white p-8 rounded-[2rem] border border-amber-100 shadow-sm hover:shadow-xl transition-all duration-500 hover:-translate-y-1"
+            >
+              <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6">
+                <div className="w-16 h-16 rounded-2xl gold-gradient flex items-center justify-center text-white text-3xl shrink-0 shadow-lg">
+                  <i className="fab fa-whatsapp"></i>
+                </div>
+                <div className="text-center sm:text-left">
+                  <h4 className="text-xl font-black text-amber-950 uppercase tracking-tight mb-1">Mentoria de Alinhamento (WhatsApp)</h4>
+                  <p className="text-amber-900/60 font-medium leading-relaxed">Sessão direta para transformar seus insights em avanços práticos e decifrar seus pontos cegos com minha orientação.</p>
+                </div>
+              </div>
+            </a>
+
+            {/* Card 2: Newsletter */}
+            <a 
+              href="https://mestresdamente.beehiiv.com" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="group block bg-amber-50 hover:bg-white p-8 rounded-[2rem] border border-amber-100 shadow-sm hover:shadow-xl transition-all duration-500 hover:-translate-y-1"
+            >
+              <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6">
+                <div className="w-16 h-16 rounded-2xl bg-amber-900 flex items-center justify-center text-amber-50 text-3xl shrink-0 shadow-lg">
+                  <i className="fas fa-users"></i>
+                </div>
+                <div className="text-center sm:text-left">
+                  <h4 className="text-xl font-black text-amber-950 uppercase tracking-tight mb-1">Comunidade Mestres da Mente (News)</h4>
+                  <p className="text-amber-900/60 font-medium leading-relaxed">Ambiente de desenvolvimento constante lado a lado com outros líderes focados em alta performance existencial.</p>
+                </div>
+              </div>
+            </a>
+
+            {/* Card 3: Instagram */}
+            <a 
+              href="https://instagram.com/renatoli.on" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="group block bg-white hover:bg-amber-50 p-8 rounded-[2rem] border-2 border-amber-100 shadow-sm hover:shadow-xl transition-all duration-500 hover:-translate-y-1"
+            >
+              <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6">
+                <div className="w-16 h-16 rounded-2xl border-2 border-amber-600 flex items-center justify-center text-amber-600 text-3xl shrink-0 shadow-sm">
+                  <i className="fab fa-instagram"></i>
+                </div>
+                <div className="text-center sm:text-left">
+                  <h4 className="text-xl font-black text-amber-950 uppercase tracking-tight mb-1">Conexão Diária (Instagram)</h4>
+                  <p className="text-amber-900/60 font-medium leading-relaxed">Acompanhe o fluxo diário de aplicação da neurociência e comportamento para manter sua clareza executiva.</p>
+                </div>
+              </div>
+            </a>
+          </div>
+        </section>
+      )}
 
       <div className="text-center pt-8 no-print">
         <button onClick={onReset} className="text-amber-800/40 hover:text-amber-700 font-black uppercase tracking-widest text-[10px] transition underline decoration-dotted">
