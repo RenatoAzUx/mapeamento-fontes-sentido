@@ -1,18 +1,19 @@
 
-import { GoogleGenAI } from "@google/genai";
+import {GoogleGenAI} from "@google/genai";
 import { AssessmentResult } from "../types";
 import { DIMENSIONS_MAP } from "../constants";
 
+// Fix: Access API key exclusively through process.env.API_KEY as per SDK guidelines.
+// This resolves the TypeScript error related to import.meta.env not existing on ImportMeta.
 export const generateFeedback = async (result: AssessmentResult): Promise<string> => {
-  // A chave é injetada globalmente pelo Vite durante o build
   const apiKey = process.env.API_KEY;
 
-  if (!apiKey || apiKey === "" || apiKey === "undefined") {
-    return "ERRO_API: Chave de acesso não detectada. Verifique se a variável 'VITE_API_KEY' foi adicionada nas configurações da Vercel.";
+  if (!apiKey) {
+    return "ERRO_API: Chave de acesso não detectada. Verifique se a variável 'API_KEY' está configurada.";
   }
 
   try {
-    // Inicialização do SDK utilizando o padrão process.env.API_KEY
+    // Fix: Always initialize with a named parameter: new GoogleGenAI({ apiKey: process.env.API_KEY })
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const { userInfo, scores } = result;
 
@@ -45,9 +46,10 @@ Finalize com:
 🧠 Consultoria: https://wa.me/5511998920790?text=Fiz%20meu%20mapeamento.%20Quero%20aplicar.
 🔎 Instagram: https://instagram.com/renatoli.on`;
 
-    // Utilizando gemini-3-flash-preview para máxima compatibilidade e performance
+    // Fix: Use 'gemini-3-pro-preview' for advanced reasoning and complex text generation tasks.
+    // Prohibited models like 'gemini-1.5-flash' must not be used.
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3-pro-preview',
       contents: userPrompt,
       config: {
         systemInstruction: systemInstruction,
@@ -55,17 +57,16 @@ Finalize com:
       }
     });
 
-    // Acessa a propriedade .text da resposta
-    return response.text || "Erro: Conteúdo não gerado.";
+    // Fix: Access generated text via the .text property (not a method call).
+    return response.text || "Erro: Conteúdo não gerado pela inteligência artificial.";
 
   } catch (error: any) {
     console.error("DEBUG GEMINI ERROR:", error);
     
-    // Captura erro específico de chave inválida retornado pela API
-    if (error.message?.includes("API key not valid") || error.status === "INVALID_ARGUMENT") {
-      return "ERRO_API: A chave de API no painel da Vercel é inválida ou contém caracteres extras. Por favor, gere uma nova chave no Google AI Studio e atualize as variáveis de ambiente.";
+    if (error.message?.includes("API key not valid")) {
+      return "ERRO_API: A chave de API fornecida é inválida.";
     }
 
-    return `ERRO_API: ${error.message || "Falha na conexão com o motor existencial."}`;
+    return `ERRO_API: ${error.message || "Falha na conexão com o servidor de análise."}`;
   }
 };
